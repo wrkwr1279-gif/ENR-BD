@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENR Bd - Smart Trading</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --grad: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%);
+            --bg: #f0f2f5;
+            --white: #ffffff;
+            --primary: #0093E9;
+            --secondary: #80D0C7;
+            --red: #ff4d4d;
+            --green: #2ecc71;
+            --gold: #f1c40f;
+            --dark: #34495e;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--grad); min-height: 100vh; display: flex; justify-content: center; padding-top: 20px; }
+
+        #app {
+            width: 100%; max-width: 420px; background: var(--bg);
+            min-height: 90vh; border-radius: 20px; overflow: hidden;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.2); position: relative; padding-bottom: 70px;
+        }
+
+        /* HEADER */
+        .header { background: var(--white); padding: 15px; text-align: center; color: var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .header h2 { font-weight: 800; letter-spacing: 1px; margin: 0; }
+
+        /* SCREENS */
+        .screen { display: none; padding: 15px; animation: fade 0.3s ease; }
+        .screen.active { display: block; }
+        @keyframes fade { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+        /* CARDS & UI */
+        .card { background: var(--white); padding: 15px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .prod-img { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; background: #eee; }
+
+        /* INVESTMENT CARD STYLE */
+        .invest-card {
+            border-left: 5px solid var(--gold);
+            background: linear-gradient(to right, #fff, #fffbf0);
+        }
+        .invest-info { display: flex; justify-content: space-between; font-size: 13px; color: #555; margin: 10px 0; }
+
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--primary); }
+
+        .btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn:active { transform: scale(0.98); }
+        .btn-red { background: var(--red); }
+        .btn-green { background: var(--green); }
+        .btn-gold { background: var(--gold); color: #333; }
+        .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); margin-top: 5px; }
+        
+        /* COPY BUTTON */
+        .copy-btn {
+            background: #eee; color: #333; border: 1px solid #ddd;
+            padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
+            margin-left: 5px; display: inline-flex; align-items: center; gap: 5px;
+        }
+        .copy-btn:active { background: #ddd; }
+
+        /* TABS */
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn { flex: 1; padding: 8px; border: none; background: #dfe4ea; border-radius: 5px; cursor: pointer; font-size: 12px; white-space: nowrap; font-weight: 600; }
+        .tab-btn.active { background: var(--primary); color: white; }
+
+        /* LIST ITEMS */
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+        .status-badge { padding: 3px 8px; border-radius: 10px; font-size: 10px; color: white; font-weight: bold; }
+        .bg-pending { background: #f1c40f; } .bg-success { background: var(--green); } .bg-danger { background: var(--red); }
+
+        /* BLOCKED OVERLAY */
+        #blocked-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+
+        /* NAV */
+        .nav { position: absolute; bottom: 0; width: 100%; background: var(--white); display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #eee; z-index: 50; }
+        .nav-item { text-align: center; font-size: 10px; color: #95a5a6; cursor: pointer; width: 33%; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item i { font-size: 22px; display: block; margin-bottom: 4px; }
+
+        /* MODAL */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 150; display: none; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 90%; max-width: 350px; padding: 20px; border-radius: 15px; max-height: 80vh; overflow-y: auto; }
+        
+        #notify { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 10px 20px; border-radius: 30px; display: none; z-index: 200; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="notify">Alert</div>
+
+    <!-- BLOCKED OVERLAY -->
+    <div id="blocked-overlay">
+        <i class="fas fa-lock" style="font-size: 50px; color: var(--red); margin-bottom: 20px;"></i>
+        <h2 style="color: var(--red);">একাউন্ট ব্লকড!</h2>
+        <p id="block-msg" style="margin: 10px 0; color: #555;">...</p>
+        <div class="card" style="width: 100%; border: 1px solid var(--red); background: #fff5f5;">
+            <h3>জরিমানা: <span id="block-fine">0</span> টাকা</h3>
+            <p style="font-size: 12px;">নাম্বার:</p>
+            <h2 id="block-admin-num" style="color: var(--primary);">...</h2>
+        </div>
+        <input type="text" id="penalty-trx" placeholder="TrxID দিন">
+        <button class="btn btn-green" onclick="submitPenalty()">জমা দিন</button>
+        <button class="btn btn-outline" style="margin-top: 20px;" onclick="logout()">লগ আউট</button>
+    </div>
+
+    <!-- 1. LOGIN -->
+    <div id="login-screen" class="screen active">
+        <div class="header"><h1>ENR Bd</h1><p>Smart Trading</p></div>
+        <div style="padding: 40px 20px;">
+            <input type="email" id="log-email" placeholder="ইমেইল">
+            <input type="password" id="log-pass" placeholder="পাসওয়ার্ড">
+            <button class="btn" onclick="login()">লগ ইন</button>
+            <button class="btn btn-outline" onclick="go('register-screen')">নতুন একাউন্ট</button>
+        </div>
+    </div>
+
+    <!-- 2. REGISTER -->
+    <div id="register-screen" class="screen">
+        <div class="header"><h1>সাইন আপ</h1></div>
+        <div style="padding: 20px;">
+            <input type="text" id="reg-name" placeholder="নাম">
+            <input type="email" id="reg-email" placeholder="ইমেইল">
+            <input type="password" id="reg-pass" placeholder="পাসওয়ার্ড">
+            <input type="text" id="reg-ref" placeholder="রেফার কোড (ঐচ্ছিক)">
+            <button class="btn" onclick="register()">রেজিস্টার</button>
+            <button class="btn btn-outline" onclick="go('login-screen')">লগ ইন পেজ</button>
+        </div>
+    </div>
+
+    <!-- 3. HOME (SHOP) -->
+    <div id="home-screen" class="screen">
+        <div class="header"><h2>Shop</h2></div>
+        <div id="products-list" style="padding-top: 15px;"></div>
+    </div>
+
+    <!-- 4. INVESTMENT SCREEN (NEW) -->
+    <div id="invest-screen" class="screen">
+        <div class="header" style="background:#fffbf0; color:#d4ac0d;">
+            <h2>Trading</h2>
+        </div>
+        <div id="invest-list" style="padding-top: 15px;"></div>
+    </div>
+
+    <!-- 5. PROFILE -->
+    <div id="profile-screen" class="screen">
+        <div class="header" style="padding-bottom: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 id="p-name">User</h2>
+                <button onclick="logout()" style="background:rgba(0,0,0,0.1); border:none; padding:5px 10px; border-radius:5px; font-weight:bold;">Logout</button>
+            </div>
+            <p id="p-ref" style="font-size:12px; opacity:0.8;">Ref: ...</p>
+        </div>
+
+        <div style="padding: 0 15px;">
+            <div class="card">
+                <div style="display:flex; justify-content:space-around;">
+                    <div style="text-align:center;">
+                        <small>ব্যালেন্স</small>
+                        <h2 id="p-bal" style="color:var(--primary);">৳0</h2>
+                    </div>
+                    <div style="text-align:center; border-left:1px solid #eee;">
+                        <small>মোট আয়</small>
+                        <h2 id="p-inc" style="color:var(--green);">৳0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                <button class="btn" onclick="openDepositModal()"><i class="fas fa-plus-circle"></i> ডিপোজিট</button>
+                <button class="btn btn-outline" style="margin:0;" onclick="openWithdrawModal()"><i class="fas fa-money-bill-wave"></i> উইথড্র</button>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; gap:5px;">
+                    <input type="text" id="usr-coupon" placeholder="কুপন কোড" style="margin:0;">
+                    <button class="btn" style="width:auto; margin:0;" onclick="redeemCoupon()">Apply</button>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('plans')">Shop Plans</button>
+                <button class="tab-btn" onclick="switchTab('inv')">Trading</button>
+                <button class="tab-btn" onclick="switchTab('dep')">Deposit</button>
+                <button class="tab-btn" onclick="switchTab('wd')">Withdraw</button>
+            </div>
+            <div id="tab-content"></div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <!-- DEPOSIT MODAL -->
+    <div id="deposit-modal" class="modal">
+        <div class="modal-content">
+            <h3>টাকা জমা দিন</h3>
+            
+            <label style="font-size:12px; font-weight:bold; margin-top:10px; display:block;">মেথড সিলেক্ট করুন:</label>
+            <select id="m-dep-method" onchange="updateDepositInfo()"></select>
+            
+            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin:10px 0; border:1px dashed #ccc;">
+                <p style="font-size:12px; color:gray;">সেন্ড মানি নাম্বার:</p>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-top:5px;">
+                    <b id="modal-dep-num" style="color:var(--primary); font-size:18px;">...</b>
+                    <button class="copy-btn" onclick="copyNum()"><i class="fas fa-copy"></i> Copy</button>
+                </div>
+            </div>
+
+            <p style="font-size:11px; color:red;">সর্বনিম্ন ডিপোজিট: ১০০ টাকা</p>
+            <br>
+            <input type="number" id="m-dep-amount" placeholder="পরিমাণ (১০০+)">
+            <input type="text" id="m-dep-trx" placeholder="Transaction ID">
+            <button class="btn" onclick="submitDeposit()">Confirm</button>
+            <button class="btn btn-outline" onclick="closeModals()">Close</button>
+        </div>
+    </div>
+
+    <!-- WITHDRAW MODAL -->
+    <div id="withdraw-modal" class="modal">
+        <div class="modal-content">
+            <h3>টাকা উত্তোলন</h3>
+            <p style="font-size:12px; color:gray;">ব্যালেন্স: <span id="m-wd-bal"></span> টাকা</p>
+            <p style="font-size:11px; color:red;">সর্বনিম্ন উইথড্র: ১০০ টাকা</p>
+            <br>
+            <label style="font-size:12px; font-weight:bold;">মেথড:</label>
+            <select id="m-wd-method">
+                <!-- Dynamic Options -->
+            </select>
+            
+            <input type="number" id="m-wd-amount" placeholder="পরিমাণ (১০০+)" style="margin-top:10px;">
+            <input type="text" id="m-wd-num" placeholder="আপনার নাম্বার">
+            <button class="btn" onclick="submitWithdraw()">Confirm</button>
+            <button class="btn btn-outline" onclick="closeModals()">Close</button>
+        </div>
+    </div>
+
+    <!-- 6. ADMIN PANEL -->
+    <div id="admin-screen" class="screen">
+        <div class="header" style="background:var(--dark); color:white;">
+            <div style="display:flex; justify-content:space-between;">
+                <h2>Admin</h2>
+                <button onclick="logout()" style="background:red; border:none; color:white; padding:5px 10px; border-radius:5px;">Logout</button>
+            </div>
+        </div>
+        <div style="padding: 10px;">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="admTab('req')">Requests</button>
+                <button class="tab-btn" onclick="admTab('prod')">Products</button>
+                <button class="tab-btn" onclick="admTab('inv')">Invest</button>
+                <button class="tab-btn" onclick="admTab('coupon')">Coupons</button> <!-- NEW COUPON TAB -->
+                <button class="tab-btn" onclick="admTab('users')">Users</button>
+                <button class="tab-btn" onclick="admTab('set')">Settings</button>
+            </div>
+            <div id="adm-content"></div>
+        </div>
+    </div>
+
+    <!-- ADMIN USER MODAL -->
+    <div id="adm-user-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="adm-u-name">User</h3>
+            <p id="adm-u-mail" style="font-size:12px; color:gray;"></p>
+            <hr style="margin:10px 0;">
+            <div id="block-controls">
+                <label>Status: <b id="adm-u-status">Active</b></label>
+                <div id="block-inputs" style="margin-top:10px;">
+                    <input type="number" id="block-amount" placeholder="জরিমানার পরিমাণ">
+                    <textarea id="block-reason" placeholder="মেসেজ"></textarea>
+                    <button class="btn btn-red" onclick="confirmBlock()">Block</button>
+                </div>
+                <button id="unblock-btn" class="btn btn-green" style="display:none;" onclick="confirmUnblock()">Unblock</button>
+            </div>
+            <button class="btn btn-outline" onclick="closeModals()">Close</button>
+        </div>
+    </div>
+
+    <!-- NAV BAR -->
+    <div id="nav" class="nav" style="display:none;">
+        <div class="nav-item active" onclick="go('home-screen', this)"><i class="fas fa-store"></i>Shop</div>
+        <div class="nav-item" onclick="go('invest-screen', this)"><i class="fas fa-chart-line"></i>Trade</div>
+        <div class="nav-item" onclick="go('profile-screen', this)"><i class="fas fa-user"></i>Profile</div>
+    </div>
+
+</div>
+
+<script>
+    // --- SAFE LOADING ---
+    const getLS = (k, def) => {
+        try {
+            const v = localStorage.getItem(k);
+            return v ? JSON.parse(v) : def;
+        } catch(e) { return def; }
+    }
+
+    const DEFAULT_ADMIN = { email: "ronyislam0330@gmail.com", pass: "arafsafwan12" };
+    
+    // UPDATED DB STRUCTURE
+    let DB = {
+        admin: getLS('enr_admin', DEFAULT_ADMIN),
+        users: getLS('enr_u', []),
+        products: getLS('enr_p', [
+            {id:1, name:'Start Pack', price:300, daily:50, days:30, img: "https://via.placeholder.com/300x150?text=Shop+Pack"}
+        ]),
+        investOptions: getLS('enr_inv_opts', [
+            {id:1, company:'Grameen Stock', min:500, days:7, profitPercent:10},
+            {id:2, company:'Robi Trading', min:1000, days:15, profitPercent:25}
+        ]),
+        deposits: getLS('enr_d', []),
+        withdraws: getLS('enr_w', []),
+        coupons: getLS('enr_c', []),
+        penalties: getLS('enr_pen', []),
+        // New Settings Structure
+        settings: getLS('enr_s_v4', { 
+            bkashNumber: "01700000000",
+            bkashActive: true,
+            nagadNumber: "01800000000",
+            nagadActive: true,
+            wdBkashActive: true,
+            wdNagadActive: true
+        }),
+        current: getLS('enr_cur', null)
+    };
+
+    // Ensure settings exist if upgraded from old version
+    if(DB.settings.wdBkashActive === undefined) DB.settings.wdBkashActive = true;
+    if(DB.settings.wdNagadActive === undefined) DB.settings.wdNagadActive = true;
+
+    // --- AUTO FIX OLD DATA ---
+    DB.users.forEach(u => {
+        if(!u.plans) u.plans = [];
+        if(!u.investments) u.investments = [];
+        if(!u.usedCoupons) u.usedCoupons = [];
+    });
+
+    const save = () => {
+        localStorage.setItem('enr_admin', JSON.stringify(DB.admin));
+        localStorage.setItem('enr_u', JSON.stringify(DB.users));
+        localStorage.setItem('enr_p', JSON.stringify(DB.products));
+        localStorage.setItem('enr_inv_opts', JSON.stringify(DB.investOptions));
+        localStorage.setItem('enr_d', JSON.stringify(DB.deposits));
+        localStorage.setItem('enr_w', JSON.stringify(DB.withdraws));
+        localStorage.setItem('enr_c', JSON.stringify(DB.coupons));
+        localStorage.setItem('enr_pen', JSON.stringify(DB.penalties));
+        localStorage.setItem('enr_s_v4', JSON.stringify(DB.settings));
+    }
+
+    const notify = (msg, type='def') => {
+        const n = document.getElementById('notify');
+        n.innerText = msg; n.style.background = type==='err'?'#ff4d4d':'#34495e';
+        n.style.display = 'block'; setTimeout(()=>n.style.display='none', 3000);
+    }
+
+    // --- NAVIGATION ---
+    function go(screen, navEl) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screen).classList.add('active');
+        
+        const nav = document.getElementById('nav');
+        if(['login-screen','register-screen','admin-screen'].includes(screen)) nav.style.display='none';
+        else nav.style.display='flex';
+
+        if(navEl) {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            navEl.classList.add('active');
+        }
+
+        if(screen === 'home-screen') renderShop();
+        if(screen === 'invest-screen') renderInvestPage();
+        if(screen === 'profile-screen') { renderProfile(); switchTab('plans'); }
+        if(screen === 'admin-screen') { admTab('req'); }
+        
+        checkAutoIncome();
+    }
+
+    // --- AUTH ---
+    function login() {
+        const e = document.getElementById('log-email').value;
+        const p = document.getElementById('log-pass').value;
+
+        if(e === DB.admin.email && p === DB.admin.pass) { go('admin-screen'); return; }
+
+        const u = DB.users.find(x => x.email === e && x.pass === p);
+        if(u) {
+            DB.current = u;
+            localStorage.setItem('enr_cur', JSON.stringify(u));
+            if(u.isBlocked) showBlockedScreen(u);
+            else go('home-screen');
+        } else notify('ভুল তথ্য', 'err');
+    }
+
+    function showBlockedScreen(user) {
+        document.getElementById('blocked-overlay').style.display = 'flex';
+        document.getElementById('block-msg').innerText = user.blockMsg || "যোগাযোগ করুন";
+        document.getElementById('block-fine').innerText = user.fine || 0;
+        document.getElementById('block-admin-num').innerText = DB.settings.bkashNumber;
+    }
+
+    function register() {
+        const n = document.getElementById('reg-name').value;
+        const e = document.getElementById('reg-email').value;
+        const p = document.getElementById('reg-pass').value;
+        const r = document.getElementById('reg-ref').value;
+
+        if(!n || !e || !p) return notify('সব তথ্য দিন', 'err');
+        if(DB.users.find(u => u.email === e)) return notify('ইমেইল আছে', 'err');
+
+        let refId = null;
+        if(r) { const refUser = DB.users.find(u => u.myRef === r); if(refUser) refId = refUser.id; }
+
+        DB.users.push({
+            id: Date.now(), name: n, email: e, pass: p,
+            balance: 0, income: 0, 
+            plans: [], investments: [],
+            myRef: 'ENR'+Math.floor(Math.random()*10000), refBy: refId,
+            isBlocked: false, usedCoupons: []
+        });
+        save(); notify('রেজিস্ট্রেশন সফল'); go('login-screen');
+    }
+
+    function logout() { DB.current = null; localStorage.removeItem('enr_cur'); document.getElementById('blocked-overlay').style.display='none'; go('login-screen'); }
+    
+    // --- SHOP ---
+    function renderShop() {
+        const div = document.getElementById('products-list'); div.innerHTML = '';
+        DB.products.forEach(p => {
+            const imgUrl = p.img || "https://via.placeholder.com/300x150?text=No+Image";
+            div.innerHTML += `
+            <div class="card">
+                <img src="${imgUrl}" class="prod-img" onerror="this.src='https://via.placeholder.com/300x150?text=Err'">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3>${p.name}</h3>
+                        <p style="font-size:12px; color:#555;">দাম: ৳${p.price} | মেয়াদ: ${p.days} দিন</p>
+                        <p style="font-size:11px; color:var(--green); font-weight:bold;">দৈনিক: ৳${p.daily}</p>
+                    </div>
+                    <button class="btn" style="width:auto;" onclick="buyProduct(${p.id})">কিনুন</button>
+                </div>
+            </div>`;
+        });
+    }
+
+    function buyProduct(id) {
+        const u = DB.users.find(x => x.id === DB.current.id);
+        const p = DB.products.find(x => x.id === id);
+        if(u.balance >= p.price) {
+            u.balance -= p.price;
+            u.plans.push({ ...p, buyTime: Date.now(), lastClaim: Date.now(), daysLeft: p.days });
+            save(); DB.current = u; notify('সফল!'); go('profile-screen');
+        } else notify('ব্যালেন্স নেই', 'err');
+    }
+
+    // --- INVESTMENT (TRADING) ---
+    function renderInvestPage() {
+        const div = document.getElementById('invest-list'); div.innerHTML = '';
+        DB.investOptions.forEach(opt => {
+            div.innerHTML += `
+            <div class="card invest-card">
+                <h3>${opt.company}</h3>
+                <div class="invest-info">
+                    <span><i class="fas fa-clock"></i> ${opt.days} দিন</span>
+                    <span><i class="fas fa-chart-line"></i> লাভ: ${opt.profitPercent}%</span>
+                </div>
+                <p style="font-size:12px; margin-bottom:5px;">সর্বনিম্ন জমা: ৳${opt.min}</p>
+                <div style="display:flex; gap:5px;">
+                    <input type="number" id="inv-amt-${opt.id}" placeholder="পরিমাণ লিখুন">
+                    <button class="btn btn-gold" style="width:auto;" onclick="submitInvestment(${opt.id})">Invest</button>
+                </div>
+            </div>`;
+        });
+    }
+
+    function submitInvestment(optId) {
+        const opt = DB.investOptions.find(o => o.id === optId);
+        const amtInput = document.getElementById(`inv-amt-${optId}`);
+        const amount = parseInt(amtInput.value);
+        const u = DB.users.find(x => x.id === DB.current.id);
+
+        if(!amount || amount < opt.min) return notify(`সর্বনিম্ন ৳${opt.min} হতে হবে`, 'err');
+        if(u.balance < amount) return notify('ব্যালেন্স নেই', 'err');
+
+        u.balance -= amount;
+        
+        const profit = Math.floor(amount * (opt.profitPercent / 100));
+        const totalReturn = amount + profit;
+        const endTime = Date.now() + (opt.days * 24 * 60 * 60 * 1000);
+
+        if(!u.investments) u.investments = [];
+        u.investments.push({
+            id: Date.now(),
+            company: opt.company,
+            invested: amount,
+            returnAmount: totalReturn,
+            endTime: endTime,
+            status: 'active'
+        });
+
+        save(); DB.current = u; notify('টাকা খাটানো হয়েছে!'); go('profile-screen'); switchTab('inv');
+    }
+
+    // --- AUTO INCOME ---
+    function checkAutoIncome() {
+        if(!DB.current) return;
+        const u = DB.users.find(x => x.id === DB.current.id);
+        const now = Date.now();
+        let added = 0;
+
+        if(u.plans) {
+            u.plans.forEach(p => {
+                if(p.daysLeft > 0) {
+                    const diff = now - p.lastClaim;
+                    const daysPassed = Math.floor(diff / (24*60*60*1000));
+                    if(daysPassed > 0) {
+                        const pay = Math.min(daysPassed, p.daysLeft) * p.daily;
+                        u.balance += pay; u.income += pay;
+                        p.daysLeft -= Math.min(daysPassed, p.daysLeft);
+                        p.lastClaim += (Math.min(daysPassed, p.daysLeft) * 24*60*60*1000);
+                        added += pay;
+                    }
+                }
+            });
+        }
+
+        if(u.investments) {
+            u.investments.forEach(inv => {
+                if(inv.status === 'active' && now >= inv.endTime) {
+                    u.balance += inv.returnAmount;
+                    u.income += (inv.returnAmount - inv.invested);
+                    inv.status = 'completed';
+                    added += inv.returnAmount;
+                }
+            });
+        }
+
+        if(added > 0) { save(); DB.current = u; notify(`অটো লাভ যুক্ত হয়েছে: ৳${added}`); if(document.getElementById('profile-screen').classList.contains('active')) renderProfile(); }
+    }
+
+    // --- PROFILE ---
+    function renderProfile() {
+        const u = DB.users.find(x => x.id === DB.current.id); DB.current = u;
+        document.getElementById('p-name').innerText = u.name;
+        document.getElementById('p-ref').innerText = `Ref: ${u.myRef}`;
+        document.getElementById('p-bal').innerText = `৳${u.balance}`;
+        document.getElementById('p-inc').innerText = `৳${u.income}`;
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        const div = document.getElementById('tab-content'); div.innerHTML = '';
+        const u = DB.users.find(x => x.id === DB.current.id);
+
+        if(tab === 'plans') {
+            if(u.plans && u.plans.length > 0) u.plans.forEach(p => div.innerHTML += `<div class="list-item"><span>${p.name}</span><span class="status-badge bg-success">${p.daysLeft} দিন</span></div>`);
+            else div.innerHTML = '<p style="text-align:center;">Empty</p>';
+        } 
+        else if(tab === 'inv') {
+            if(u.investments && u.investments.length > 0) {
+                u.investments.forEach(inv => {
+                    const daysLeft = Math.ceil((inv.endTime - Date.now())/(1000*60*60*24));
+                    const status = inv.status==='active' ? `Pending (${daysLeft > 0 ? daysLeft : 0} days left)` : 'Completed';
+                    const color = inv.status==='active' ? 'bg-pending' : 'bg-success';
+                    div.innerHTML += `
+                    <div class="list-item">
+                        <div><b>${inv.company}</b><br><small>Invest: ${inv.invested} -> Get: ${inv.returnAmount}</small></div>
+                        <span class="status-badge ${color}">${status}</span>
+                    </div>`;
+                });
+            } else div.innerHTML = '<p style="text-align:center;">Empty</p>';
+        }
+        else if(tab === 'dep') {
+            DB.deposits.filter(d => d.uid === u.id).reverse().forEach(d => {
+                const c = d.status==='approved'?'bg-success':(d.status==='rejected'?'bg-danger':'bg-pending');
+                div.innerHTML += `<div class="list-item"><div><b>৳${d.amount}</b><br><small>${d.trx}</small></div><span class="status-badge ${c}">${d.status}</span></div>`;
+            });
+        } 
+        else if(tab === 'wd') {
+            DB.withdraws.filter(w => w.uid === u.id).reverse().forEach(w => {
+                const c = w.status==='paid'?'bg-success':(w.status==='rejected'?'bg-danger':'bg-pending');
+                div.innerHTML += `<div class="list-item"><div><b>৳${w.amount}</b><br><small>${w.num}</small></div><span class="status-badge ${c}">${w.status}</span></div>`;
+            });
+        }
+    }
+
+    // --- MODAL & LOGIC ---
+    function openDepositModal() {
+        document.getElementById('deposit-modal').style.display='flex';
+        const sel = document.getElementById('m-dep-method');
+        sel.innerHTML = '';
+        let optionsAdded = false;
+        if(DB.settings.bkashActive) { sel.innerHTML += '<option value="Bkash">Bkash</option>'; optionsAdded = true; }
+        if(DB.settings.nagadActive) { sel.innerHTML += '<option value="Nagad">Nagad</option>'; optionsAdded = true; }
+        if(!optionsAdded) { sel.innerHTML = '<option>Closed</option>'; document.getElementById('modal-dep-num').innerText = "ডিপোজিট বন্ধ"; } 
+        else { updateDepositInfo(); }
+    }
+
+    function updateDepositInfo() {
+        const method = document.getElementById('m-dep-method').value;
+        const numDisplay = document.getElementById('modal-dep-num');
+        if(method === 'Bkash') numDisplay.innerText = DB.settings.bkashNumber;
+        else if(method === 'Nagad') numDisplay.innerText = DB.settings.nagadNumber;
+        else numDisplay.innerText = "...";
+    }
+
+    function copyNum() {
+        const text = document.getElementById('modal-dep-num').innerText;
+        if(text && text !== "..." && text !== "ডিপোজিট বন্ধ") {
+            navigator.clipboard.writeText(text).then(() => notify("কপি হয়েছে!"));
+        }
+    }
+
+    function openWithdrawModal() {
+        document.getElementById('withdraw-modal').style.display='flex';
+        document.getElementById('m-wd-bal').innerText = DB.current.balance;
+        
+        const sel = document.getElementById('m-wd-method');
+        sel.innerHTML = '';
+        let opt = false;
+        if(DB.settings.wdBkashActive) { sel.innerHTML += '<option>Bkash</option>'; opt=true; }
+        if(DB.settings.wdNagadActive) { sel.innerHTML += '<option>Nagad</option>'; opt=true; }
+        if(!opt) sel.innerHTML = '<option>Closed</option>';
+    }
+
+    function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display='none'); }
+
+    function submitDeposit() {
+        const amt = document.getElementById('m-dep-amount').value;
+        const trx = document.getElementById('m-dep-trx').value;
+        const method = document.getElementById('m-dep-method').value;
+
+        if(method === 'Closed') return notify('ডিপোজিট বর্তমানে বন্ধ', 'err');
+
+        if(amt && trx) {
+            if(parseInt(amt) < 100) return notify('সর্বনিম্ন ১০০ টাকা', 'err');
+            DB.deposits.push({ id: Date.now(), uid: DB.current.id, uname: DB.current.name, amount: parseInt(amt), trx, status: 'pending', method: method });
+            save(); closeModals(); notify('রিকোয়েস্ট সফল!');
+        } else notify('সব তথ্য দিন', 'err');
+    }
+
+    function submitWithdraw() {
+        const amt = parseInt(document.getElementById('m-wd-amount').value);
+        const num = document.getElementById('m-wd-num').value;
+        const method = document.getElementById('m-wd-method').value;
+        const u = DB.users.find(x => x.id === DB.current.id);
+
+        if(method === 'Closed') return notify('উইথড্র বর্তমানে বন্ধ', 'err');
+
+        if(amt && num) {
+            if(amt < 100) return notify('সর্বনিম্ন ১০০ টাকা', 'err');
+            if(u.balance >= amt) {
+                u.balance -= amt;
+                DB.withdraws.push({id: Date.now(), uid: u.id, uname: u.name, amount: amt, num, status: 'pending', method: method});
+                save(); closeModals(); notify('উইথড্র সফল!');
+            } else notify('ব্যালেন্স নেই', 'err');
+        } else notify('সব তথ্য দিন', 'err');
+    }
+
+    function redeemCoupon() {
+        const code = document.getElementById('usr-coupon').value;
+        const u = DB.users.find(x => x.id === DB.current.id);
+        const c = DB.coupons.find(x => x.code === code);
+        if(c && !u.usedCoupons.includes(code)) {
+            u.balance += parseInt(c.amount); u.usedCoupons.push(code); save(); notify(`৳${c.amount} বোনাস!`); renderProfile();
+        } else notify('অবৈধ কুপন', 'err');
+    }
+
+    function submitPenalty() {
+        const trx = document.getElementById('penalty-trx').value;
+        if(trx) { DB.penalties.push({id: Date.now(), uid: DB.current.id, uname: DB.current.name, amount: DB.current.fine, trx, status: 'pending'}); save(); notify('জমা হয়েছে!'); }
+    }
+
+    // --- ADMIN ---
+    let selectedUserForBlock = null;
+    function admTab(tab) {
+        const div = document.getElementById('adm-content'); div.innerHTML = '';
+        if(tab === 'req') {
+            div.innerHTML += '<h4>Deposits</h4>';
+            DB.deposits.filter(d => d.status==='pending').forEach(d => div.innerHTML += `<div class="card"><b>${d.uname}</b> ৳${d.amount} (${d.method})<br><small>${d.trx}</small><br><button class="btn btn-green" style="width:auto;padding:5px;" onclick="admApproveDep(${d.id})">OK</button> <button class="btn btn-red" style="width:auto;padding:5px;" onclick="admRejectDep(${d.id})">X</button></div>`);
+            div.innerHTML += '<h4 style="margin-top:10px;">Withdraws</h4>';
+            DB.withdraws.filter(w => w.status==='pending').forEach(w => div.innerHTML += `<div class="card"><b>${w.uname}</b> ৳${w.amount} (${w.method})<br><small>${w.num}</small><br><button class="btn btn-green" style="width:auto;padding:5px;" onclick="admPayWd(${w.id})">Paid</button> <button class="btn btn-red" style="width:auto;padding:5px;" onclick="admRejectWd(${w.id})">Refund</button></div>`);
+            div.innerHTML += '<h4 style="margin-top:10px;">Penalties</h4>';
+            DB.penalties.filter(p => p.status==='pending').forEach(p => div.innerHTML += `<div class="card" style="border:1px solid red;"><b>${p.uname}</b> Paid ৳${p.amount}<br><button class="btn btn-green" onclick="admUnblockUser(${p.uid},${p.id})">Unblock</button></div>`);
+        } 
+        else if(tab === 'prod') {
+            div.innerHTML += `
+            <div class="card"><h4>New Shop Product</h4><input id="np-n" placeholder="Name"><input id="np-i" placeholder="Img URL"><input id="np-p" type="number" placeholder="Price"><input id="np-d" type="number" placeholder="Daily"><input id="np-dy" type="number" placeholder="Days"><button class="btn" onclick="admAddProd()">Add</button></div>
+            <h4>Active Products</h4><div id="adm-pl"></div>`; admRenderProd();
+        } 
+        else if(tab === 'inv') {
+            div.innerHTML += `
+            <div class="card" style="border-left:5px solid var(--gold);">
+                <h4>New Investment Company</h4>
+                <input id="ni-c" placeholder="Company Name (e.g. Grameen Stock)">
+                <input id="ni-m" type="number" placeholder="Min Amount">
+                <input id="ni-d" type="number" placeholder="Duration (Days)">
+                <input id="ni-p" type="number" placeholder="Profit % (e.g. 10)">
+                <button class="btn btn-gold" onclick="admAddInv()">Add Company</button>
+            </div>
+            <h4>Active Companies</h4><div id="adm-il"></div>`; admRenderInv();
+        }
+        else if(tab === 'coupon') { // --- COUPON TAB LOGIC START ---
+            div.innerHTML += `
+            <div class="card">
+                <h4>Add New Coupon</h4>
+                <input id="nc-code" placeholder="Coupon Code (e.g. BONUS50)">
+                <input id="nc-amount" type="number" placeholder="Amount (Taka)">
+                <button class="btn" onclick="admAddCoupon()">Create Coupon</button>
+            </div>
+            <h4>Active Coupons</h4>
+            <div id="adm-coupon-list"></div>`;
+            admRenderCoupons();
+        } // --- COUPON TAB LOGIC END ---
+        else if(tab === 'users') {
+            div.innerHTML += '<input placeholder="Search..." onkeyup="admSearchUser(this.value)"><div id="adm-user-list"></div>'; admSearchUser('');
+        } 
+        else if(tab === 'set') {
+            div.innerHTML += `
+            <div class="card">
+                <h4>Deposit Settings</h4>
+                <div style="margin-top:10px;">
+                    <label>Bkash Num:</label>
+                    <input id="set-bk-n" value="${DB.settings.bkashNumber}">
+                    <label>Bkash Dep Status:</label>
+                    <select id="set-bk-s">
+                        <option value="true" ${DB.settings.bkashActive?'selected':''}>On</option>
+                        <option value="false" ${!DB.settings.bkashActive?'selected':''}>Off</option>
+                    </select>
+                </div>
+                <hr style="margin:10px 0;">
+                <div>
+                    <label>Nagad Num:</label>
+                    <input id="set-ng-n" value="${DB.settings.nagadNumber}">
+                    <label>Nagad Dep Status:</label>
+                    <select id="set-ng-s">
+                        <option value="true" ${DB.settings.nagadActive?'selected':''}>On</option>
+                        <option value="false" ${!DB.settings.nagadActive?'selected':''}>Off</option>
+                    </select>
+                </div>
+                
+                <h4 style="margin-top:20px; color:var(--red);">Withdraw Settings</h4>
+                <div style="margin-top:10px;">
+                    <label>Bkash Withdraw:</label>
+                    <select id="set-wd-bk">
+                        <option value="true" ${DB.settings.wdBkashActive?'selected':''}>On</option>
+                        <option value="false" ${!DB.settings.wdBkashActive?'selected':''}>Off</option>
+                    </select>
+                    <label style="margin-top:5px;">Nagad Withdraw:</label>
+                    <select id="set-wd-ng">
+                        <option value="true" ${DB.settings.wdNagadActive?'selected':''}>On</option>
+                        <option value="false" ${!DB.settings.wdNagadActive?'selected':''}>Off</option>
+                    </select>
+                </div>
+
+                <button class="btn" style="margin-top:10px;" onclick="admSaveSettings()">Save All Settings</button>
+            </div>
+            <div class="card"><h4>Admin Login</h4><input id="ne" value="${DB.admin.email}"><input id="np" value="${DB.admin.pass}"><button class="btn" onclick="admUpdCreds()">Update</button></div>`;
+        }
+    }
+
+    function admSaveSettings() {
+        // Deposit
+        DB.settings.bkashNumber = document.getElementById('set-bk-n').value;
+        DB.settings.bkashActive = document.getElementById('set-bk-s').value === 'true';
+        DB.settings.nagadNumber = document.getElementById('set-ng-n').value;
+        DB.settings.nagadActive = document.getElementById('set-ng-s').value === 'true';
+        // Withdraw
+        DB.settings.wdBkashActive = document.getElementById('set-wd-bk').value === 'true';
+        DB.settings.wdNagadActive = document.getElementById('set-wd-ng').value === 'true';
+        
+        save();
+        notify('Settings Updated!');
+    }
+
+    // --- COUPON FUNCTIONS ---
+    function admAddCoupon() {
+        const code = document.getElementById('nc-code').value;
+        const amt = parseInt(document.getElementById('nc-amount').value);
+        if(code && amt) {
+            DB.coupons.push({code: code, amount: amt});
+            save();
+            admTab('coupon');
+            notify('Coupon Created');
+        } else {
+            notify('Please fill all fields', 'err');
+        }
+    }
+
+    function admRenderCoupons() {
+        const div = document.getElementById('adm-coupon-list');
+        div.innerHTML = '';
+        if(DB.coupons.length === 0) div.innerHTML = '<p style="text-align:center;color:#777;">No active coupons</p>';
+        
+        DB.coupons.forEach((c, i) => {
+            div.innerHTML += `
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <b>${c.code}</b>
+                    <br><small>Value: ৳${c.amount}</small>
+                </div>
+                <button class="btn btn-red" style="width:auto; padding:5px 10px;" onclick="admDelCoupon(${i})">Del</button>
+            </div>`;
+        });
+    }
+
+    function admDelCoupon(index) {
+        DB.coupons.splice(index, 1);
+        save();
+        admTab('coupon');
+    }
+
+    // --- EXISTING ADMIN FUNCTIONS ---
+    function admAddProd() {
+        DB.products.push({id:Date.now(), name:document.getElementById('np-n').value, img:document.getElementById('np-i').value, price:parseInt(document.getElementById('np-p').value), daily:parseInt(document.getElementById('np-d').value), days:parseInt(document.getElementById('np-dy').value)});
+        save(); admTab('prod');
+    }
+    function admRenderProd() {
+        const l = document.getElementById('adm-pl'); l.innerHTML='';
+        DB.products.forEach((p,i) => l.innerHTML += `<div class="card">${p.name} (${p.price}) <button class="btn btn-red" style="width:auto;padding:5px;float:right;" onclick="DB.products.splice(${i},1);save();admTab('prod')">Del</button></div>`);
+    }
+
+    function admAddInv() {
+        DB.investOptions.push({id:Date.now(), company:document.getElementById('ni-c').value, min:parseInt(document.getElementById('ni-m').value), days:parseInt(document.getElementById('ni-d').value), profitPercent:parseInt(document.getElementById('ni-p').value)});
+        save(); admTab('inv');
+    }
+    function admRenderInv() {
+        const l = document.getElementById('adm-il'); l.innerHTML='';
+        DB.investOptions.forEach((p,i) => l.innerHTML += `<div class="card">${p.company} (Min: ${p.min}, ${p.profitPercent}%) <button class="btn btn-red" style="width:auto;padding:5px;float:right;" onclick="DB.investOptions.splice(${i},1);save();admTab('inv')">Del</button></div>`);
+    }
+
+    function admUpdCreds() { DB.admin.email=document.getElementById('ne').value; DB.admin.pass=document.getElementById('np').value; save(); notify('Changed! Logging out...'); setTimeout(logout,1500); }
+    function admSearchUser(q) {
+        const l = document.getElementById('adm-user-list'); l.innerHTML = '';
+        DB.users.forEach(u => { if(u.name.toLowerCase().includes(q.toLowerCase())) l.innerHTML += `<div class="list-item" onclick="admOpenUser(${u.id})"><span>${u.name}</span><span style="color:${u.isBlocked?'red':'green'}">${u.isBlocked?'BLOCKED':'Active'}</span></div>`; });
+    }
+    function admOpenUser(id) {
+        selectedUserForBlock = id; const u = DB.users.find(x => x.id === id);
+        document.getElementById('adm-u-name').innerText = u.name;
+        document.getElementById('adm-u-mail').innerText = u.email;
+        document.getElementById('adm-u-status').innerText = u.isBlocked ? 'Blocked' : 'Active';
+        document.getElementById('block-inputs').style.display = u.isBlocked ? 'none' : 'block';
+        document.getElementById('unblock-btn').style.display = u.isBlocked ? 'block' : 'none';
+        document.getElementById('adm-user-modal').style.display = 'flex';
+    }
+    function confirmBlock() { const u = DB.users.find(x => x.id === selectedUserForBlock); u.isBlocked = true; u.fine = document.getElementById('block-amount').value; u.blockMsg = document.getElementById('block-reason').value; save(); closeModals(); admTab('users'); }
+    function confirmUnblock() { const u = DB.users.find(x => x.id === selectedUserForBlock); u.isBlocked = false; save(); closeModals(); admTab('users'); }
+    function admUnblockUser(uid, pid) { const u = DB.users.find(x => x.id === uid); const p = DB.penalties.find(x => x.id === pid); if(u) { u.isBlocked=false; u.fine=0; p.status='approved'; save(); admTab('req'); } }
+    function admApproveDep(id) { const d=DB.deposits.find(x=>x.id===id); const u=DB.users.find(x=>x.id===d.uid); u.balance+=d.amount; d.status='approved'; if(u.refBy){const r=DB.users.find(x=>x.id===u.refBy);if(r)r.balance+=(d.amount*0.2);} save(); admTab('req'); }
+    function admRejectDep(id) { DB.deposits.find(x=>x.id===id).status='rejected'; save(); admTab('req'); }
+    function admPayWd(id) { DB.withdraws.find(x=>x.id===id).status='paid'; save(); admTab('req'); }
+    function admRejectWd(id) { const w=DB.withdraws.find(x=>x.id===id); const u=DB.users.find(x=>x.id===w.uid); u.balance+=w.amount; w.status='rejected'; save(); admTab('req'); }
+
+    if(DB.current) { 
+        if(DB.current.isBlocked) showBlockedScreen(DB.current); 
+        else go('home-screen'); 
+    } else {
+        go('login-screen');
+    }
+</script>
+</body>
+</html>
