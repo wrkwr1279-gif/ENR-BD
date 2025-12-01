@@ -1,0 +1,1 @@
+ENR Bd is a mobile-friendly earning and trading web app UI built with HTML, CSS, and JavaScript. Users can register, buy products, earn daily profit, track income, deposit, withdraw, and manage their profile. Includes a shop system, daily profit plan, coupon option, and basic admin control UI.
